@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="512" height="512" rx="128" fill="#0f172a" />
+  
+  <!-- Outer Ring representing loop/memory -->
+  <circle cx="256" cy="256" r="140" fill="none" stroke="url(#blueGrad)" stroke-width="28" stroke-dasharray="600 300" />
+  
+  <!-- Core Mind Sparkle Symbol -->
+  <path d="M256 160 C256 220, 220 256, 160 256 C220 256, 256 292, 256 352 C256 292, 292 256, 352 256 C292 256, 256 220, 256 160 Z" fill="url(#blueGrad)" />
+</svg>

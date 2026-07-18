@@ -1,0 +1,109 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  preferences  UserPreference?
+  memories     Memory[]
+  collections  Collection[]
+  searchLogs   SearchHistory[]
+}
+
+model UserPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme           String   @default("system") // light, dark, system
+  aiSummaries     Boolean  @default(true)
+  resurfacingEnabled Boolean @default(true)
+}
+
+model Memory {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  type         String        // link, image, pdf, note
+  sourceUrl    String?
+  sourceDomain String?
+  summary      String?       // AI summary
+  rawText      String?       // Extracted page text / Note content
+  ocrText      String?       // Extracted image text
+  status       String        // CAPTURED, PROCESSING, PROCESSED, FAILED
+  isFavorite   Boolean       @default(false)
+  isArchived   Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  savedAt      DateTime      @default(now())
+  
+  // Storage paths
+  filePath     String?       // Path to local uploads (images/PDFs)
+  
+  // Relations
+  tags         MemoryTag[]
+  collections  CollectionMemory[]
+  embedding    Embedding?
+}
+
+model Embedding {
+  id       String @id @default(uuid())
+  memoryId String @unique
+  memory   Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  vector   String // JSON-serialized Float array representing the embedding vector
+}
+
+model Tag {
+  id       String      @id @default(uuid())
+  name     String      @unique
+  memories MemoryTag[]
+}
+
+model MemoryTag {
+  memoryId String
+  tagId    String
+  memory   Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([memoryId, tagId])
+}
+
+model Collection {
+  id          String             @id @default(uuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  coverColor  String             @default("blue") // CSS gradient key
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  memories    CollectionMemory[]
+}
+
+model CollectionMemory {
+  collectionId String
+  memoryId     String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  memory       Memory     @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@id([collectionId, memoryId])
+}
+
+model SearchHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  createdAt DateTime @default(now())
+}
