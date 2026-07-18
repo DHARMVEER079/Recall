@@ -575,9 +575,23 @@ function DashboardContent() {
                           {Math.round(score * 100)}% Match
                         </span>
                       )}
-                      <span className="text-[9px] text-muted-foreground">
-                        {new Date(memory.savedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {memory.status !== 'READY' && memory.status !== 'PROCESSED' && (
+                          <span className={`inline-flex items-center gap-1 text-[8px] font-bold px-1.5 py-0.5 rounded leading-none ${
+                            memory.status === 'FAILED' 
+                              ? 'bg-rose-500/10 text-rose-500' 
+                              : 'bg-amber-500/10 text-amber-500 animate-pulse'
+                          }`}>
+                            {memory.status === 'CAPTURED' ? 'Scraping...' :
+                             memory.status === 'METADATA_EXTRACTED' ? 'Scraped' :
+                             memory.status === 'AI_CLASSIFIED' ? 'Summarizing...' :
+                             memory.status === 'EMBEDDING_GENERATED' ? 'Indexing...' : 'Processing...'}
+                          </span>
+                        )}
+                        <span className="text-[9px] text-muted-foreground">
+                          {new Date(memory.savedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
                     </div>
                   </div>
 

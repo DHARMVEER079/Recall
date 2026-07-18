@@ -152,23 +152,6 @@ export async function saveLinkMemory(
       }
     });
 
-    // 3. Extract Metadata
-    await db.memory.update({
-      where: { id: memory.id },
-      data: { status: 'METADATA_EXTRACTED' }
-    });
-
-    const metadata = await fetchWebMetadata(url);
-    
-    await db.memory.update({
-      where: { id: memory.id },
-      data: {
-        title: metadata.title,
-        summary: metadata.description,
-        sourceDomain: metadata.domain,
-      }
-    });
-
     // If a collection is specified, add it
     if (collectionId) {
       await db.collectionMemory.create({
@@ -179,13 +162,39 @@ export async function saveLinkMemory(
       });
     }
 
-    // 4. Run AI pipeline async (in background or sequential for SQLite simplicity)
-    await runAiProcessingPipeline(
-      memory.id,
-      'link',
-      `${metadata.title} ${metadata.description}`,
-      metadata.title
-    );
+    // Run scraping and AI pipeline in the background
+    (async () => {
+      try {
+        const metadata = await fetchWebMetadata(url);
+        
+        await db.memory.update({
+          where: { id: memory.id },
+          data: {
+            title: metadata.title || url,
+            summary: metadata.description || 'Webpage content captured.',
+            sourceDomain: metadata.domain || null,
+            status: 'METADATA_EXTRACTED'
+          }
+        });
+
+        await runAiProcessingPipeline(
+          memory.id,
+          'link',
+          `${metadata.title || url} ${metadata.description || ''}`,
+          metadata.title || url
+        );
+      } catch (err) {
+        console.error('Background processing failed for link:', memory.id, err);
+        await db.memory.update({
+          where: { id: memory.id },
+          data: { 
+            title: url,
+            summary: 'Failed to extract webpage metadata. Link saved successfully.',
+            status: 'READY' 
+          }
+        });
+      }
+    })();
 
     revalidatePath('/dashboard');
     return { success: true, data: memory };
@@ -234,13 +243,23 @@ export async function saveNoteMemory(
       });
     }
 
-    // Run AI pipeline
-    await runAiProcessingPipeline(
-      memory.id,
-      'note',
-      cleanNoteText,
-      memoryTitle
-    );
+    // Run AI pipeline in the background
+    (async () => {
+      try {
+        await runAiProcessingPipeline(
+          memory.id,
+          'note',
+          cleanNoteText,
+          memoryTitle
+        );
+      } catch (err) {
+        console.error('Background processing failed for note:', memory.id, err);
+        await db.memory.update({
+          where: { id: memory.id },
+          data: { status: 'READY' }
+        });
+      }
+    })();
 
     revalidatePath('/dashboard');
     return { success: true, data: memory };
@@ -300,15 +319,25 @@ export async function saveUploadMemory(
       extractableText = `Image file uploaded: ${fileName}`;
     }
 
-    // Run AI pipeline (multimodal for image, text-based for PDF)
-    await runAiProcessingPipeline(
-      memory.id,
-      type as any,
-      extractableText,
-      fileName,
-      mimeType,
-      buffer
-    );
+    // Run AI pipeline in the background
+    (async () => {
+      try {
+        await runAiProcessingPipeline(
+          memory.id,
+          type as any,
+          extractableText,
+          fileName,
+          mimeType,
+          buffer
+        );
+      } catch (err) {
+        console.error('Background processing failed for upload:', memory.id, err);
+        await db.memory.update({
+          where: { id: memory.id },
+          data: { status: 'READY' }
+        });
+      }
+    })();
 
     revalidatePath('/dashboard');
     return { success: true, data: memory };
